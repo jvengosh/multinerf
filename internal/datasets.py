@@ -22,6 +22,7 @@ from os import path
 import queue
 import threading
 from typing import Mapping, Optional, Sequence, Text, Tuple, Union
+import yaml
 
 import cv2
 from internal import camera_utils
@@ -926,12 +927,9 @@ class GaSp(Dataset):
         qvec = np.array(ext['qvec'])
         tvec = np.array(ext['tvec'])
 
-        #TODO: Assuming that there is only one camera
-        images[image] = Image(
-            id=None, qvec=qvec, tvec=tvec,
-            camera_id=1, name=image,
-            xys=None, point3D_ids=None
-        )
+        images[image] = {'extrinsic' : ext, 'qvec' : qvec,
+                         'tvec' : tvec, 'name' : image
+                         }
     return images
   
   def read_intrinsics_config(path):
@@ -946,7 +944,7 @@ class GaSp(Dataset):
         params = [intr['focal_length_x'], intr['focal_length_z'], None, None]
         
         #TODO: Assuming that there is only one camera
-        cameras[1] = Camera(id=1, model="PINHOLE",
-                            width=width, height=height,
-                            params=params)
+        cameras[1] = {'id' : 1, 'model' : "PINHOLE",
+                            'width' : width, 'height' : height,
+                            'params' : params}
     return cameras
