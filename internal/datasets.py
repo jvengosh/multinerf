@@ -909,3 +909,44 @@ class DTU(Dataset):
     self.height, self.width = images.shape[1:3]
     self.camtoworlds = camtoworlds[indices]
     self.pixtocams = pixtocams[indices]
+    
+class GaSp(Dataset):
+  def _load_renderings(self, config):
+    cam_extrinsics = GaSp.read_extrinsics_config(config)
+    cam_intrinsics = GaSp.read_intrinsics_config(config)
+    return super()._load_renderings(config)
+  
+  def read_extrinsics_config(path):
+    images = {}
+    with open(path, "r") as reader:
+        config = yaml.full_load(reader)
+
+    for image in config.keys():
+        ext = config[image]['extrinsics']
+        qvec = np.array(ext['qvec'])
+        tvec = np.array(ext['tvec'])
+
+        #TODO: Assuming that there is only one camera
+        images[image] = Image(
+            id=None, qvec=qvec, tvec=tvec,
+            camera_id=1, name=image,
+            xys=None, point3D_ids=None
+        )
+    return images
+  
+  def read_intrinsics_config(path):
+    cameras = {}
+    with open(path, "r") as reader:
+        config = yaml.full_load(reader)
+
+    for cfg in config.keys():
+        width = config[cfg]['width']
+        height = config[cfg]['height']
+        intr = config[cfg]['intrinsics']
+        params = [intr['focal_length_x'], intr['focal_length_z'], None, None]
+        
+        #TODO: Assuming that there is only one camera
+        cameras[1] = Camera(id=1, model="PINHOLE",
+                            width=width, height=height,
+                            params=params)
+    return cameras
