@@ -915,6 +915,20 @@ class GaSp(Dataset):
   def _load_renderings(self, config):
     cam_extrinsics = GaSp.read_extrinsics_config(config)
     cam_intrinsics = GaSp.read_intrinsics_config(config)
+    
+    self.images = np.empty((len(cam_extrinsics)))
+    self.camtoworlds = np.empty((0))
+    self.pixtocams = np.empty((0))
+
+    # load images
+    for n in range(len(cam_extrinsics)):
+      self.images[n] = Image.open(os.path.join("images/", cam_extrinsics[n]['name']))
+      self.camtoworlds[n] = cam_extrinsics[n]['extrinsic']
+      self.pixtocams[n] = cam_intrinsics['intrinsic']
+    
+    self.height = cam_intrinsics['height']
+    self.width = cam_intrinsics['width']
+    
     return super()._load_renderings(config)
   
   def read_extrinsics_config(path):
@@ -928,8 +942,9 @@ class GaSp(Dataset):
         tvec = np.array(ext['tvec'])
 
         images[image] = {'extrinsic' : ext, 'qvec' : qvec,
-                         'tvec' : tvec, 'name' : image
-                         }
+                        'tvec' : tvec, 'name' : image
+                        }
+
     return images
   
   def read_intrinsics_config(path):
@@ -944,7 +959,6 @@ class GaSp(Dataset):
         params = [intr['focal_length_x'], intr['focal_length_z'], None, None]
         
         #TODO: Assuming that there is only one camera
-        cameras[1] = {'id' : 1, 'model' : "PINHOLE",
-                            'width' : width, 'height' : height,
-                            'params' : params}
+        cameras = {'id' : 1, 'width' : width, 'height' : height,
+                            'intrinsic' : intr, 'params' : params}
     return cameras
