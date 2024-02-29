@@ -49,9 +49,9 @@ def load_dataset(split, train_dir, config):
       'tat_nerfpp': TanksAndTemplesNerfPP,
       'tat_fvs': TanksAndTemplesFVS,
       'dtu': DTU,
-      'gasp': GaSp
+      'ours': Ours
   }
-  return dataset_dict[config.dataset_loader](split, train_dir, config)
+  return dataset_dict['ours'](split, train_dir, config)
 
 
 class NeRFSceneManager(pycolmap.SceneManager):
@@ -912,7 +912,7 @@ class DTU(Dataset):
     self.camtoworlds = camtoworlds[indices]
     self.pixtocams = pixtocams[indices]
     
-class GaSp(Dataset):
+class Ours(Dataset):
   def _load_renderings(self, config):
     cam_extrinsics = GaSp.read_extrinsics_config(config)
     cam_intrinsics = GaSp.read_intrinsics_config(config)
