@@ -49,6 +49,7 @@ def load_dataset(split, train_dir, config):
       'tat_nerfpp': TanksAndTemplesNerfPP,
       'tat_fvs': TanksAndTemplesFVS,
       'dtu': DTU,
+      'gasp': GaSp
   }
   return dataset_dict[config.dataset_loader](split, train_dir, config)
 
