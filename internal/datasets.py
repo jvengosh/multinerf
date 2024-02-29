@@ -914,8 +914,8 @@ class DTU(Dataset):
     
 class Ours(Dataset):
   def _load_renderings(self, config):
-    cam_extrinsics = GaSp.read_extrinsics_config(config)
-    cam_intrinsics = GaSp.read_intrinsics_config(config)
+    cam_extrinsics = Ours.read_extrinsics_config(config)
+    cam_intrinsics = Ours.read_intrinsics_config(config)
     
     self.images = np.empty((len(cam_extrinsics)))
     self.camtoworlds = np.empty((0))
@@ -924,7 +924,7 @@ class Ours(Dataset):
     # load images
     for n in range(len(cam_extrinsics)):
       self.images[n] = Image.open(os.path.join("images/", cam_extrinsics[n]['name']))
-      self.camtoworlds[n] = np.concatenate((GaSp.qvec2rotmat(cam_extrinsics[n]['qvec']), cam_extrinsics[n]['tvec'].T), axis=1)
+      self.camtoworlds[n] = np.concatenate((Ours.qvec2rotmat(cam_extrinsics[n]['qvec']), cam_extrinsics[n]['tvec'].T), axis=1)
       self.pixtocams[n] = np.array([cam_intrinsics['params'][0], 0, 0],
                                    [0, cam_intrinsics['params'][1], 0],
                                    [0, 0, 1])
