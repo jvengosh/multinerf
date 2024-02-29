@@ -923,8 +923,10 @@ class GaSp(Dataset):
     # load images
     for n in range(len(cam_extrinsics)):
       self.images[n] = Image.open(os.path.join("images/", cam_extrinsics[n]['name']))
-      self.camtoworlds[n] = cam_extrinsics[n]['extrinsic']
-      self.pixtocams[n] = cam_intrinsics['intrinsic']
+      self.camtoworlds[n] = np.concatenate((GaSp.qvec2rotmat(cam_extrinsics[n]['qvec']), cam_extrinsics[n]['tvec'].T), axis=1)
+      self.pixtocams[n] = np.array([cam_intrinsics['params'][0], 0, 0],
+                                   [0, cam_intrinsics['params'][1], 0],
+                                   [0, 0, 1])
     
     self.height = cam_intrinsics['height']
     self.width = cam_intrinsics['width']
@@ -941,9 +943,7 @@ class GaSp(Dataset):
         qvec = np.array(ext['qvec'])
         tvec = np.array(ext['tvec'])
 
-        images[image] = {'extrinsic' : ext, 'qvec' : qvec,
-                        'tvec' : tvec, 'name' : image
-                        }
+        images[image] = {'qvec' : qvec, 'tvec' : tvec, 'name' : image}
 
     return images
   
@@ -959,6 +959,17 @@ class GaSp(Dataset):
         params = [intr['focal_length_x'], intr['focal_length_z'], None, None]
         
         #TODO: Assuming that there is only one camera
-        cameras = {'id' : 1, 'width' : width, 'height' : height,
-                            'intrinsic' : intr, 'params' : params}
+        cameras = {'id' : 1, 'width' : width, 'height' : height, 'params' : params}
     return cameras
+  
+  def qvec2rotmat(qvec):
+    return np.array([
+        [1 - 2 * qvec[2]**2 - 2 * qvec[3]**2,
+         2 * qvec[1] * qvec[2] - 2 * qvec[0] * qvec[3],
+         2 * qvec[3] * qvec[1] + 2 * qvec[0] * qvec[2]],
+        [2 * qvec[1] * qvec[2] + 2 * qvec[0] * qvec[3],
+         1 - 2 * qvec[1]**2 - 2 * qvec[3]**2,
+         2 * qvec[2] * qvec[3] - 2 * qvec[0] * qvec[1]],
+        [2 * qvec[3] * qvec[1] - 2 * qvec[0] * qvec[2],
+         2 * qvec[2] * qvec[3] + 2 * qvec[0] * qvec[1],
+         1 - 2 * qvec[1]**2 - 2 * qvec[2]**2]])
