@@ -914,6 +914,7 @@ class DTU(Dataset):
     
 class Ours(Dataset):
   def _load_renderings(self, config):
+    config=f"data{os.sep}camera_parameters.yml"
     cam_extrinsics = Ours.read_extrinsics_config(config)
     cam_intrinsics = Ours.read_intrinsics_config(config)
     
