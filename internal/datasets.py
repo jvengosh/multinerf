@@ -51,7 +51,7 @@ def load_dataset(split, train_dir, config):
       'dtu': DTU,
       'ours': Ours
   }
-  return dataset_dict['ours'](split, train_dir, config)
+  return dataset_dict[config.dataset_loader](split, train_dir, config)
 
 
 class NeRFSceneManager(pycolmap.SceneManager):
@@ -914,47 +914,100 @@ class DTU(Dataset):
     
 class Ours(Dataset):
   def _load_renderings(self, config):
-    config=f"data{os.sep}camera_parameters.yml"
-    cam_extrinsics = Ours.read_extrinsics_config(config)
-    cam_intrinsics = Ours.read_intrinsics_config(config)
-    
-    self.images = np.empty((len(cam_extrinsics)))
-    self.camtoworlds = np.empty((0))
-    self.pixtocams = np.empty((0))
 
-    # load images
-    for n in range(len(cam_extrinsics)):
-      self.images[n] = Image.open(os.path.join("images/", cam_extrinsics[n]['name']))
-      self.camtoworlds[n] = np.concatenate((Ours.qvec2rotmat(cam_extrinsics[n]['qvec']), cam_extrinsics[n]['tvec'].T), axis=1)
-      self.pixtocams[n] = np.array([cam_intrinsics['params'][0], 0, 0],
-                                   [0, cam_intrinsics['params'][1], 0],
-                                   [0, 0, 1])
+    path = os.path.join(config.data_dir, "./sparse/0/cam_config.yaml")
+    import pdb; pdb.set_trace()
+    directory = os.path.join(config.data_dir, "images")
+    png_files = sorted(
+      [file for file in os.listdir(directory) if file.endswith('.png')]
+    )
+    cam_extrinsics = Ours.read_extrinsics_config(path, png_files)
+    cam_intrinsics = Ours.read_intrinsics_config(path, png_files)
+    print(cam_extrinsics.keys())
+
     
+    
+
+    # images = []
+    import pdb;pdb.set_trace()
+    self.images = np.empty((len(png_files)))
+    self.camtoworlds = np.ones((len(png_files), 3, 4))
+    self.pixtocams = np.ones((len(png_files), 3, 3))
+
+    # for png_file in png_files:
+    #   image = cv2.imread(os.path.join(directory, png_file))
+    #   image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+    #   images.append(image)
+
+    # stacked_images = np.stack(images)
+    # self.images = stacked_images
+    
+    # print( 'here', self.camtoworlds[0])
+    # print(self.pixtocams[n])
+    basedir = config.data_dir
+    def load_files(dirname, load_fn, shape=None):
+      files = [
+          os.path.join(basedir, dirname, f)
+          for f in sorted(utils.listdir(os.path.join(basedir, dirname)))
+      ]
+      mats = np.array([load_fn(utils.open_file(f, 'rb')) for f in files])
+      if shape is not None:
+        mats = mats.reshape(mats.shape[:1] + shape)
+      return mats
+    # load images
+    import pdb;pdb.set_trace()
+    self.images = np.expand_dims(
+      load_files('images', lambda f: np.array(Image.open(f))) / 255., axis=-1
+    )
+    self.images = np.repeat(self.images, 3, axis=-1)
+
+    for n in range(len(png_files)):
+      self.camtoworlds[n, :, :] = np.concatenate((
+        Ours.qvec2rotmat(cam_extrinsics[n]['qvec']).T,
+        cam_extrinsics[n]['tvec'].reshape(3,1)
+      ), axis=1)
+      # value = value
+      # print(value.shape)
+      # print('value value', value)
+      camtopix = np.array([[cam_intrinsics['params'][0], 0, cam_intrinsics['width'] / 2],
+                           [0, cam_intrinsics['params'][1], cam_intrinsics['height'] / 2],
+                           [0, 0, 1]])
+      self.pixtocams[n, :, :] = np.linalg.inv(camtopix)
+
     self.height = cam_intrinsics['height']
     self.width = cam_intrinsics['width']
     
     return super()._load_renderings(config)
   
-  def read_extrinsics_config(path):
+  def read_extrinsics_config(path, png_files):
     images = {}
+    import pdb; pdb.set_trace()
     with open(path, "r") as reader:
         config = yaml.full_load(reader)
-
+    idx = 0
     for image in config.keys():
+        if image not in png_files:
+          continue
+
+
         ext = config[image]['extrinsics']
         qvec = np.array(ext['qvec'])
         tvec = np.array(ext['tvec'])
 
-        images[image] = {'qvec' : qvec, 'tvec' : tvec, 'name' : image}
+        images[idx] = {'qvec' : qvec, 'tvec' : tvec, 'name' : image}
+        idx += 1
 
     return images
   
-  def read_intrinsics_config(path):
+  def read_intrinsics_config(path, png_files):
     cameras = {}
+    import pdb; pdb.set_trace()
     with open(path, "r") as reader:
         config = yaml.full_load(reader)
 
     for cfg in config.keys():
+        if cfg not in png_files:
+          continue
         width = config[cfg]['width']
         height = config[cfg]['height']
         intr = config[cfg]['intrinsics']
